@@ -34,7 +34,7 @@ async function runPlugin(plugin) {
   const dir = join(ROOT, 'plugins', plugin)
   const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
 
-  check(pkg.name === `dsh-local-team-${plugin}`, `${plugin} 包名 ${pkg.name}`)
+  check(pkg.name === `@Himmeltala/dsh-${plugin}`, `${plugin} 包名 ${pkg.name}`)
   check(pkg.dsh?.bundle?.patch === './cordis.patch.yml', `${plugin} 声明 dsh.bundle`)
   check(pkg.files?.includes('cordis.patch.yml') === true, `${plugin} 打包带 cordis.patch.yml`)
   check(pkg.repository?.url?.includes('dsh-plugins') === true, `${plugin} 仓库指向 dsh-plugins`)

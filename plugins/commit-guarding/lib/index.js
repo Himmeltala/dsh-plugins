@@ -11,7 +11,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { registerGuard } from './guard.js'
 
-const PROVIDER = 'dsh-local-team-commit-guarding'
+const PROVIDER = '@Himmeltala/dsh-commit-guarding'
 const SKILLS = fileURLToPath(new URL('../skills/', import.meta.url))
 const RANK = 600
 const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/

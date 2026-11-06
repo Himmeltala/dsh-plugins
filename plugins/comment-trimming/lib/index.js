@@ -10,7 +10,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const PROVIDER = 'dsh-local-team-comment-trimming'
+const PROVIDER = '@Himmeltala/dsh-comment-trimming'
 const SKILLS = fileURLToPath(new URL('../skills/', import.meta.url))
 const RANK = 600
 const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/

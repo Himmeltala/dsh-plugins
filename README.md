@@ -22,7 +22,7 @@ dsh-plugins/
     │   ├── README.md
     │   ├── lib/
     │   │   ├── index.js       # 把 skills/ 注册成 DSH 技能来源
-    │   │   └── guard.js       # bash 调用前复跑 scripts/ 里两份闸门脚本
+    │   │   └── guard.js       # shell 调用前复跑 scripts/ 里两份闸门脚本（bash / pwsh）
     │   ├── scripts/           # svn 与 git 两份提交闸门脚本
     │   ├── references/        # 提交信息格式细则
     │   ├── skills/            # git-commit、svn-commit 两份技能
@@ -58,7 +58,7 @@ dsh plugin --profile web add ./plugins/commit-guarding
 
 技能由包内 `lib/index.js` 注册，装完即用，不需要往 `~/.dsh/skills` 拷贝。以前用软链挂技能的，切到包安装后先删掉对应软链，否则同名技能按 rank 仍然命中软链那份。
 
-`commit-guarding` 的提交闸门由 `lib/guard.js` 在 bash 调用前复跑 `scripts/` 里那两份脚本，与 Claude 侧 `hooks/` 跑的是同一批判定。
+`commit-guarding` 的提交闸门由 `lib/guard.js` 在 shell 调用前复跑 `scripts/` 里那两份脚本，与 Claude 侧 `hooks/` 跑的是同一批判定。它按工具名分平台接：POSIX 上是 `bash`，Windows 上是 `pwsh`；Windows 找不到 bash 时静默放行（Git for Windows 自带的即可，也可用 `DSH_GUARD_BASH` 指定）。
 
 dshmarket 的列表只读 awesome-dsh-plugin 的目录，收录要向上游提 PR；本仓库不走那条路，市场里搜不到，不影响安装。
 

@@ -30,9 +30,24 @@ sys.stdout.write("%s\0%s\0%s" % (
 
 # 读闸门输入，把 tool_name、cwd、command 三段写进全局数组 HOOK_FIELDS。
 # cwd 不在这里消化：svn 闸门的 resolve_target 要用它。
-# 不是 Bash 调用、缺命令、JSON 解析失败时返回 1。
+#
+# 两条来路：
+#   一、标准输入喂一段 JSON，靠 python3 或 jq 解析。Claude Code 的钩子走这条。
+#   二、环境变量直传，不解析 JSON。DSH 在 Windows 上往往两者都没有，由
+#       lib/guard.js 在调用前设好这三个变量：
+#         DSH_GUARD_TOOL_NAME  工具名，缺省 Bash
+#         DSH_GUARD_CWD        工作目录
+#         DSH_GUARD_COMMAND    命令行原文
+#       这条路已经由 guard.js 按工具名筛过，所以不再校验工具名。
+#
+# 不是 shell 的提交调用、缺命令、JSON 解析失败时返回 1。
 hook_input() {
   local raw
+  if [ -n "${DSH_GUARD_COMMAND:-}" ]; then
+    HOOK_FIELDS=("${DSH_GUARD_TOOL_NAME:-Bash}" "${DSH_GUARD_CWD:-}" "$DSH_GUARD_COMMAND")
+    return 0
+  fi
+
   raw=$(cat)
   [ -n "$raw" ] || return 1
 

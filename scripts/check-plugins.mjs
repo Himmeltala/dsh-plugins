@@ -55,12 +55,16 @@ async function runPlugin(plugin) {
   check(definition?.content?.length > 0, `${plugin} 正文可读 ${definition?.name}`)
 
   if (plugin === 'commit-guarding') {
-    const exec = (command) => ({ name: 'bash', arguments: { command, description: 'check' }, agent: { session: { header: { id: 'check' } } } })
+    const exec = (command, name = 'bash') => ({ name, arguments: { command, description: 'check' }, agent: { session: { header: { id: 'check' } } } })
     const next = async () => ({ kind: 'allow' })
     const denied = await listener.value(exec('git commit -m "feat(login): 加个功能"'), next)
     const allowed = await listener.value(exec('ls -la'), next)
     check(denied.kind === 'deny', 'commit-guarding 闸门拦下带范围括号的提交')
     check(allowed.kind === 'allow', 'commit-guarding 闸门放行普通命令')
+
+    // DSH 在 Windows 上把 shell 工具叫 pwsh，闸门同样要接住。
+    const pwshDenied = await listener.value(exec('git commit -m "feat(login): 加个功能"', 'pwsh'), next)
+    check(pwshDenied.kind === 'deny', 'commit-guarding 闸门接住 pwsh 工具')
   }
 }
 

@@ -130,15 +130,26 @@ window.__ModuleLoader__.load({
       }))
       ctx.effect(() => () => form.dispose(), 'output-guarding: form subscription')
 
-      ctx.effect(() => ctx.configForms.whileServed([ENTRY], () => ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
+      // 不拿 whileServed 当开关：命名空间没就绪时表单自己会显示「不可用」，
+      // 至少能看见这一页；否则一旦 Host 没把命名空间发给客户端，整页就消失了。
+      ctx.effect(() => ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
         name: 'plugins.bundle.config',
-        entryKey: ENTRY,
+        // 这个槽按 key 分发：key 就是插件包名，包详情页拿 pkg.name 来取。
+        key: ENTRY,
+        locale: NS,
+        inject: () => ({ hooks: { outputForm: store }, ...form.actions() }),
+      }, OutputPage)), 'output-guarding: settings page')
+
+      // 再挂一份到 plugins.item：插件包详情页要先进包列表再点进去，
+      // 这份让它在插件页的条目区直接可见，两处渲染的是同一个表单。
+      ctx.effect(() => ctx.slots.inject('plugins.item', () => ctx.slots.register({
+        name: 'plugins.item',
         id: ENTRY,
         order: 40,
         label: () => t('title'),
         locale: NS,
         inject: () => ({ hooks: { outputForm: store }, ...form.actions() }),
-      }, OutputPage))), 'output-guarding: settings page')
+      }, OutputPage)), 'output-guarding: settings item')
     }
 
     exports.NS = NS

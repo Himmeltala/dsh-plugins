@@ -1,6 +1,6 @@
 {
   "name": "@Himmeltala/dsh-output-guarding",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "description": "产出物与临时脚本的落盘守卫：把交付物限制在产出目录、把排查脚本限制在脚本目录，路径可在 DSH 设置里改。",
   "type": "module",
   "main": "lib/index.js",

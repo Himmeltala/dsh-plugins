@@ -66,6 +66,28 @@ async function runPlugin(plugin) {
     const pwshDenied = await listener.value(exec('git commit -m "feat(login): 加个功能"', 'pwsh'), next)
     check(pwshDenied.kind === 'deny', 'commit-guarding 闸门接住 pwsh 工具')
   }
+
+  if (plugin === 'output-guarding') {
+    const next = async () => ({ kind: 'allow' })
+    const call = (name, args) => ({ name, arguments: args, agent: { session: { header: { id: 'check' } } } })
+    const docs = 'D:/Media Files/个人/TEMP/docs/check/2026-11-08'
+    const scripts = 'D:/Media Files/个人/TEMP/scripts/check/2026-11-08'
+
+    check((await listener.value(call('write', { file_path: 'D:/code/repo/out.docx' }), next)).kind === 'deny',
+      'output-guarding 拦下仓库里的交付物')
+    check((await listener.value(call('write', { file_path: `${docs}/out.docx` }), next)).kind === 'allow',
+      'output-guarding 放行产出目录')
+    check((await listener.value(call('write', { file_path: 'D:/code/repo/probe.ps1' }), next)).kind === 'deny',
+      'output-guarding 拦下仓库里的脚本')
+    check((await listener.value(call('write', { file_path: `${scripts}/probe.ps1` }), next)).kind === 'allow',
+      'output-guarding 放行脚本目录')
+    check((await listener.value(call('pwsh', { command: 'Out-File -FilePath D:/code/repo/a.py' }), next)).kind === 'deny',
+      'output-guarding 拦下命令里的越界脚本')
+    check((await listener.value(call('pwsh', { command: 'echo x > "D:/code/repo/b.py"' }), next)).kind === 'deny',
+      'output-guarding 认得出重定向目标是越界脚本')
+    check((await listener.value(call('pwsh', { command: 'git status' }), next)).kind === 'allow',
+      'output-guarding 放行普通命令')
+  }
 }
 
 const plugins = readdirSync(join(ROOT, 'plugins'), { withFileTypes: true })

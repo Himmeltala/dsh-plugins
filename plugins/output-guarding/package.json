@@ -1,0 +1,49 @@
+{
+  "name": "@Himmeltala/dsh-output-guarding",
+  "version": "0.1.1",
+  "description": "产出物与临时脚本的落盘守卫：把交付物限制在产出目录、把排查脚本限制在脚本目录，路径可在 DSH 设置里改。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "skills",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
+      ],
+      "platform": "web"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.0"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "skill",
+    "guard",
+    "outputs"
+  ],
+  "author": {
+    "name": "Himmeltala"
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Himmeltala/dsh-plugins.git",
+    "directory": "plugins/output-guarding"
+  }
+}

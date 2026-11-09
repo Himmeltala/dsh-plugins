@@ -6,7 +6,7 @@
  * @FilePath: \scripts\check-plugins.mjs
  * @Description: 校验三个插件的 DSH 打包：包名、dsh.bundle、技能可列出、闸门可拦可放。
  */
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -30,6 +30,13 @@ function fakeContext(provider, listener) {
   }
 }
 
+/** 浏览器产物的核心模块是普通 ESM，校验时直接加载。 */
+let coreModule
+async function loadCore(libDir) {
+  coreModule ??= await import(pathToFileURL(join(libDir, 'client-core.js')).href)
+  return coreModule
+}
+
 async function runPlugin(plugin) {
   const dir = join(ROOT, 'plugins', plugin)
   const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
@@ -38,6 +45,56 @@ async function runPlugin(plugin) {
   check(pkg.dsh?.bundle?.patch === './cordis.patch.yml', `${plugin} 声明 dsh.bundle`)
   check(pkg.files?.includes('cordis.patch.yml') === true, `${plugin} 打包带 cordis.patch.yml`)
   check(pkg.repository?.url?.includes('dsh-plugins') === true, `${plugin} 仓库指向 dsh-plugins`)
+
+  // 纯客户端插件：宿主侧只声明身份，界面全在浏览器侧。浏览器产物是“登记工厂”的闭包，
+  // 在 node 里给它一个假的 window 与 require，把工厂叫起来就能校验。
+  if (pkg.dsh?.client !== undefined) {
+    check(pkg.dsh.client.platform === 'web', `${plugin} 客户端插件平台 web`)
+    check(pkg.exports?.['./client'] === './lib/client.js', `${plugin} 导出 ./client`)
+    check(pkg.files?.includes('lib') === true, `${plugin} 打包带 lib`)
+
+    const libDir = join(dir, 'lib')
+    const registered = { value: undefined }
+    globalThis.window = { __ModuleLoader__: { load: (registration) => { registered.value = registration } } }
+    try {
+      await import(pathToFileURL(join(libDir, 'client.js')).href)
+    } finally {
+      delete globalThis.window
+    }
+    const registration = registered.value
+    check(registration?.id === pkg.name, `${plugin} 客户端注册的 id 与包名一致`)
+    // 工厂里只能用 require 同步取模块，所以核心模块先加载好，require 只交引用。
+    const core = existsSync(join(libDir, 'client-core.js')) ? await loadCore(libDir) : undefined
+    const requested = new Set()
+    const stub = new Proxy({}, { get: () => () => null })
+    const client = registration.factory((specifier) => {
+      requested.add(specifier)
+      if (specifier === 'react') return { useState: () => undefined, useMemo: (fn) => fn() }
+      if (specifier === 'react/jsx-runtime') return { jsx: () => null, jsxs: () => null, Fragment: 'Fragment' }
+      if (specifier === '@deepseek-ai/dsh-client-store') return { createSnapshotStore: () => ({ getSnapshot: () => ({}), subscribe: () => () => {}, set: () => {}, update: () => {} }) }
+      if (specifier === './client-styles.js') return { default: '', root: '', head: '' }
+      if (specifier === './client-core.js') return core
+      return stub
+    })
+    check(typeof client.apply === 'function', `${plugin} 客户端入口可加载`)
+    const injection = typeof client.inject === 'function' ? client.inject() : client.inject
+    check(
+      (Array.isArray(injection) && injection.length > 0) || (injection !== null && typeof injection === 'object' && Object.keys(injection).length > 0),
+      `${plugin} 客户端声明依赖`,
+    )
+
+    // 只有带扫描导出的插件才做这一项；其余客户端插件校验到这里为止。
+    if (typeof client.scanSession !== 'function') return
+    const session = client.scanSession('check', 'D:/w', [
+      { type: 'tool/call', time: 1, data: { name: 'read', callId: 'c1', turn: 1, arguments: '{"file_path":"a.ts"}' } },
+      { type: 'tool/result', time: 2, data: { callId: 'c1', message: { isError: false } } },
+      { type: 'tool/call', time: 3, data: { name: 'pwsh', callId: 'c2', turn: 1, arguments: '{"command":"git status"}' } },
+      { type: 'tool/call', time: 4, data: { name: 'read', callId: 'c3', turn: 1, arguments: '{bad json' } },
+    ])
+    const entries = client.core.mergeVisits(session, 10, 3_600_000)
+    check(entries.length === 2 && entries.some((entry) => entry.path === 'D:/w/a.ts'), `${plugin} 会话事件能归成访问记录`)
+    return
+  }
 
   const provider = {}
   const listener = {}

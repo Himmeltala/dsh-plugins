@@ -1,0 +1,50 @@
+{
+  "name": "@Himmeltala/dsh-access-log",
+  "version": "0.1.0",
+  "description": "记录 DSH 读取过的文件、目录与命令，按工作区归类，在侧边栏面板与对话里可查可开。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "skills",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "external": [
+        "@deepseek-ai/dsh-client-store",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-primitives",
+        "@deepseek-ai/dsh-util-values"
+      ]
+    }
+  },
+  "engines": {
+    "dsh": ">=0.2.0"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "access-log",
+    "audit"
+  ],
+  "author": {
+    "name": "Himmeltala"
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Himmeltala/dsh-plugins.git",
+    "directory": "plugins/access-log"
+  }
+}

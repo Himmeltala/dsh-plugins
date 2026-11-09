@@ -84,6 +84,21 @@ async function runPlugin(plugin) {
     ])
     const entries = client.core.mergeVisits(session, 10, 3_600_000)
     check(entries.length === 2 && entries.some((entry) => entry.path === 'D:/w/a.ts'), `${plugin} 会话事件能归成访问记录`)
+    // 事件窗口的真实入口是 eventSource.getSnapshot().entries，每项包一层 { event }。
+    if (typeof client.eventsOf === 'function') {
+      const window = client.eventsOf({
+        eventSource: {
+          getSnapshot: () => ({
+            entries: [
+              { event: { type: 'tool/call', time: 1, data: { name: 'read', callId: 'c1', arguments: '{"file_path":"a.ts"}' } } },
+              { event: { type: 'tool/result', time: 2, data: { callId: 'c1', message: { isError: false } } } },
+            ],
+          }),
+        },
+      })
+      const scanned = client.core.mergeVisits(client.scanSession('check', 'D:/w', window), 10, 3_600_000)
+      check(window.length === 2 && scanned.length === 1, `${plugin} 能从会话事件源读到事件`)
+    }
     return
   }
 

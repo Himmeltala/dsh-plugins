@@ -150,10 +150,19 @@ window.__ModuleLoader__.load({
       return items
     }
 
-    /** 会话事件窗口：`eventSource.events` 是当前版本的入口。 */
+    /**
+     * 会话事件窗口：入口是 `eventSource.getSnapshot().entries`，每项包一层 `{ event }`。
+     * @param binding 会话绑定。
+     */
     function eventsOf(binding) {
-      const events = binding?.eventSource?.events
-      return Array.isArray(events) ? events : []
+      const snapshot = binding?.eventSource?.getSnapshot?.()
+      const entries = Array.isArray(snapshot?.entries) ? snapshot.entries : []
+      const events = []
+      for (const entry of entries) {
+        const event = entry?.event ?? entry
+        if (event !== undefined && typeof event.type === 'string') events.push(event)
+      }
+      return events
     }
 
     /**
@@ -194,7 +203,12 @@ window.__ModuleLoader__.load({
       }
       const bindings = []
       for (const id of ids) {
-        const binding = ctx.sessions.binding(id)
+        let binding
+        try {
+          binding = ctx.sessions.binding(id)
+        } catch (error) {
+          console.warn('[access-log] session binding failed:', id, error)
+        }
         if (binding !== undefined) bindings.push(binding)
       }
       return bindings
@@ -219,6 +233,7 @@ window.__ModuleLoader__.load({
       let sessionId = ''
       let cwd = ''
       let timer
+      let offSource
 
       const refresh = () => {
         const list = ctx.sessions.list.getSnapshot()
@@ -254,6 +269,27 @@ window.__ModuleLoader__.load({
         }, 300)
       }
 
+      /**
+       * 订阅当前会话的事件流，有新事件就重新扫描。
+       * @param id 会话 id。
+       */
+      const follow = (id) => {
+        if (offSource !== undefined) {
+          offSource()
+          offSource = undefined
+        }
+        if (typeof id !== 'string' || id === '') return
+        let binding
+        try {
+          binding = ctx.sessions.binding(id)
+        } catch {
+          return
+        }
+        const source = binding?.eventSource
+        if (source === undefined || typeof source.subscribe !== 'function') return
+        offSource = source.subscribe(() => { schedule() })
+      }
+
       const track = () => {
         const selected = ctx.uiSession.adapter.current.getSnapshot().key ?? ''
         const list = ctx.sessions.list.getSnapshot()
@@ -261,6 +297,7 @@ window.__ModuleLoader__.load({
         if (selected === sessionId && nextCwd === cwd) return
         sessionId = selected
         cwd = nextCwd
+        follow(selected)
         refresh()
       }
 
@@ -295,10 +332,11 @@ window.__ModuleLoader__.load({
         openTarget,
         dispose() {
           if (timer !== undefined) clearTimeout(timer)
+          if (offSource !== undefined) offSource()
         },
         /** 服务都接上之后才扫第一遍：插件 apply 期间不碰别的服务的订阅。 */
         ready() {
-          refresh()
+          track()
         },
       }
 
@@ -311,6 +349,7 @@ window.__ModuleLoader__.load({
     exports.core = core
     exports.createRecorder = createRecorder
     exports.scanSession = scanSession
+    exports.eventsOf = eventsOf
 
     /** 依赖的服务：侧边栏槽位、文案、会话与投影、布局、右侧栏的导航与标签类型。 */
     exports.inject = ['slots', 'locale', 'sessions', 'uiSession', 'layout', 'sidebarRight', 'sidebarRightTabs']

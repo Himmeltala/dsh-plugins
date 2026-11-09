@@ -1,6 +1,6 @@
 {
   "name": "@Himmeltala/dsh-access-log",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "记录 DSH 读取过的文件、目录与命令，按工作区归类，在侧边栏面板与对话里可查可开。",
   "type": "module",
   "main": "lib/index.js",

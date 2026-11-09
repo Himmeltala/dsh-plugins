@@ -6,7 +6,7 @@
  * @FilePath: \scripts\check-plugins.mjs
  * @Description: 校验三个插件的 DSH 打包：包名、dsh.bundle、技能可列出、闸门可拦可放。
  */
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -28,13 +28,6 @@ function fakeContext(provider, listener) {
     on: (event, handler) => { if (event === 'tools/pre-execute') listener.value = handler },
     get: (name) => name === 'workingDirectory' ? { get: () => ROOT } : undefined,
   }
-}
-
-/** 浏览器产物的核心模块是普通 ESM，校验时直接加载。 */
-let coreModule
-async function loadCore(libDir) {
-  coreModule ??= await import(pathToFileURL(join(libDir, 'client-core.js')).href)
-  return coreModule
 }
 
 async function runPlugin(plugin) {
@@ -63,17 +56,15 @@ async function runPlugin(plugin) {
     }
     const registration = registered.value
     check(registration?.id === pkg.name, `${plugin} 客户端注册的 id 与包名一致`)
-    // 工厂里只能用 require 同步取模块，所以核心模块先加载好，require 只交引用。
-    const core = existsSync(join(libDir, 'client-core.js')) ? await loadCore(libDir) : undefined
-    const requested = new Set()
+    // 加载器每个包只交一个 client.js，相对依赖必须在构建时内联，运行时没有别的模块可 require。
+    const artifact = readFileSync(join(libDir, 'client.js'), 'utf8')
+    check(!artifact.includes("require('./"), `${plugin} 客户端产物无相对依赖`)
     const stub = new Proxy({}, { get: () => () => null })
     const client = registration.factory((specifier) => {
-      requested.add(specifier)
+      if (specifier.startsWith('./')) throw new Error(`构建产物仍有相对 require: ${specifier}`)
       if (specifier === 'react') return { useState: () => undefined, useMemo: (fn) => fn() }
       if (specifier === 'react/jsx-runtime') return { jsx: () => null, jsxs: () => null, Fragment: 'Fragment' }
       if (specifier === '@deepseek-ai/dsh-client-store') return { createSnapshotStore: () => ({ getSnapshot: () => ({}), subscribe: () => () => {}, set: () => {}, update: () => {} }) }
-      if (specifier === './client-styles.js') return { default: '', root: '', head: '' }
-      if (specifier === './client-core.js') return core
       return stub
     })
     check(typeof client.apply === 'function', `${plugin} 客户端入口可加载`)

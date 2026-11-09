@@ -54,9 +54,11 @@ dsh-plugins/
         ├── README.md
         ├── lib/
         │   ├── index.js       # 宿主侧入口：只声明身份
-        │   ├── client.js      # 浏览器侧：读会话事件、左栏入口、主面板、右侧栏页面
+        │   ├── client-entry.js # 浏览器侧源码：读会话事件、左栏入口、主面板、右侧栏页面
         │   ├── client-core.js # 纯逻辑：归类、路径解析、归并、按工作区分组
-        │   └── client-styles.js
+        │   ├── client-styles.js
+        │   └── client.js      # 构建产物：上面三个内联成单文件
+        ├── scripts/build-client.mjs
         └── skills/dsh-client-plugin/   # 浏览器侧插件的写法
 ```
 

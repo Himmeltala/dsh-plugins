@@ -47,6 +47,16 @@ dsh plugin --profile desktop add ./plugins/access-log
 
 装完重启应用。启动后控制台若出现 `access-log` 相关的 `did not activate` 告警，多半是宿主版本里缺了某个注入的服务，按告警列出的服务名核对 `lib/client.js` 的 `inject`。
 
+## 构建
+
+DSH 的模块加载器每个包只交一个 `client.js`，相对 `require` 运行时没有模块表可查（会报 `missed the module table`）。所以 `lib/client.js` 是构建产物：`client-entry.js`、`client-core.js`、`client-styles.js` 由 `scripts/build-client.mjs` 内联成一个文件。改这三个源码后要重新构建：
+
+```bash
+node plugins/access-log/scripts/build-client.mjs
+```
+
+`scripts/check-plugins.mjs` 会拒绝带相对 `require` 的产物。
+
 ## 目录
 
 ```
@@ -55,8 +65,10 @@ access-log/
 ├── cordis.patch.yml      # DSH 挂载行，id 与包名一致
 ├── lib/
 │   ├── index.js          # 宿主侧入口：只声明身份，不采集
-│   ├── client.js         # 浏览器侧入口：记录器、左栏入口、主面板、右侧栏页面
+│   ├── client-entry.js   # 浏览器侧源码：记录器、左栏入口、主面板、右侧栏页面
 │   ├── client-core.js    # 纯逻辑：归类、路径解析、归并、按工作区分组（无运行时依赖）
-│   └── client-styles.js  # 类名与样式表
+│   ├── client-styles.js  # 类名与样式表
+│   └── client.js         # 构建产物：上面三个内联成单文件，勿直接编辑
+├── scripts/build-client.mjs
 └── skills/dsh-client-plugin/SKILL.md
 ```
